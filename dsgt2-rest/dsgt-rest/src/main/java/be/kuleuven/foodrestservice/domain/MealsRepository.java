@@ -5,6 +5,7 @@ import org.springframework.util.Assert;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class MealsRepository {
@@ -53,5 +54,67 @@ public class MealsRepository {
 
     public Collection<Meal> getAllMeal() {
         return meals.values();
+    }
+
+    public Optional<Meal> findCheapestMeal() {
+        if (meals.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return meals.values().stream()
+                .min(Comparator.comparing(Meal::getPrice));
+    }
+
+    public Optional<Meal> findLargestMeal() {
+        return meals.values().stream()
+                .max(Comparator.comparing(Meal::getKcal));
+    }
+
+    public Meal addMeal(Meal meal) {
+        Assert.notNull(meal, "Meal can't be null");
+
+        meals.put(meal.getId(), meal);
+        return meal;
+    }
+
+    public Optional<Meal> updateMeal(String id, Meal updatedMeal) {
+        Assert.notNull(id, "Meal id must not be null");
+        Assert.notNull(updatedMeal, "Meal must not be null");
+
+        if (!meals.containsKey(id)) {
+            return Optional.empty();
+        }
+
+        updatedMeal.setId(id);
+        meals.put(id, updatedMeal);
+        return Optional.of(updatedMeal);
+    }
+
+    public boolean deleteMeal(String id) {
+        Assert.notNull(id, "Meal id must not be null");
+        return meals.remove(id) != null;
+    }
+
+    public OrderConfirmation addOrder(Order order) {
+        Assert.notNull(order, "Order must not be null");
+        Assert.notNull(order.getAddress(), "Address must not be null");
+        Assert.notNull(order.getMealIds(), "Meal ids must not be null");
+
+        List<Meal> orderedMeals = order.getMealIds().stream()
+                .map(id -> Optional.ofNullable(meals.get(id))
+                        .orElseThrow(() -> new NoSuchElementException("Meal not found: " + id)))
+                .collect(Collectors.toList());
+
+        double total = orderedMeals.stream()
+                .mapToDouble(Meal::getPrice)
+                .sum();
+
+        OrderConfirmation confirmation = new OrderConfirmation();
+        confirmation.setMessage("Order accepted");
+        confirmation.setAddress(order.getAddress());
+        confirmation.setOrderedMealIds(new ArrayList<>(order.getMealIds()));
+        confirmation.setTotalPrice(total);
+
+        return confirmation;
     }
 }
