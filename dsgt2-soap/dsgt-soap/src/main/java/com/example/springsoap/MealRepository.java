@@ -73,5 +73,47 @@ public class MealRepository {
         return values.stream().min(Comparator.comparing(Meal::getPrice)).orElseThrow(NoSuchElementException::new);
     }
 
+    public OrderConfirmation addOrder(Order order) {
+        Assert.notNull(order, "Order must not be null");
+
+        OrderConfirmation confirmation = new OrderConfirmation();
+
+        if (order.getAddress() == null || order.getAddress().isBlank()) {
+            confirmation.setSuccess(false);
+            confirmation.setMessage("Address must not be empty");
+            confirmation.setTotalPrice(0.0f);
+            confirmation.setMealCount(0);
+            confirmation.setAddress("");
+            return confirmation;
+        }
+
+        float total = 0.0f;
+        int count = 0;
+
+        for (String mealName : order.getMealName()) {
+            Meal meal = meals.get(mealName);
+
+            if (meal == null) {
+                confirmation.setSuccess(false);
+                confirmation.setMessage("Meal not found: " + mealName);
+                confirmation.setTotalPrice(0.0f);
+                confirmation.setMealCount(0);
+                confirmation.setAddress(order.getAddress());
+                return confirmation;
+            }
+
+            total += meal.getPrice();
+            count++;
+        }
+
+        confirmation.setSuccess(true);
+        confirmation.setMessage("Order placed successfully");
+        confirmation.setTotalPrice(total);
+        confirmation.setMealCount(count);
+        confirmation.setAddress(order.getAddress());
+
+        return confirmation;
+    }
+
 
 }
